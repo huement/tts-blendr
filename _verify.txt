@@ -1,0 +1,69 @@
+Verification Instructions:
+
+Check folder structure:
+
+tree voice_blender/
+
+
+Activate virtual environment and install dependencies (requirements.txt can be empty for now):
+
+python -m venv venv
+source venv/bin/activate  # Mac/Linux
+.\venv\Scripts\activate   # Windows
+pip install -r requirements.txt
+
+
+Run main.py:
+
+python voice_blender/main.py
+
+
+Output should be: Voice Blender starting...
+
+
+
+------------------------------------------------------------------------------------
+
+
+
+Verification Instructions:
+
+Activate a fresh virtual environment.
+
+Run the install script:
+
+python scripts/install.py
+
+
+Verify:
+
+Dependencies installed (pip list).
+
+Models exist in voice_blender/models/.
+
+No errors during execution.
+
+Success message printed.
+
+
+------------------------------------------------------------------------------------
+
+
+Verification Instructions:
+
+Activate the virtual environment.
+
+Run:
+
+python voice_blender/main.py
+
+
+Verify:
+
+Header is visible with correct title.
+
+Footer is visible with "Status: Ready".
+
+Body placeholder text is visible.
+
+Terminal resizing doesn’t break layout.

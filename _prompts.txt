@@ -1,0 +1,157 @@
+You are the AI coding assistant for this project.  
+Create the initial folder structure for a Python 3 project using Textual.
+
+Project name: voiceblend-tui
+
+Requirements:
+- A clean, minimal, standard Python project layout
+- Must support both "src layout" (src/ folder) and be easy to package later
+- Include placeholder modules, not full implementations
+- Include README.md, pyproject.toml, requirements.txt
+- Prepare for a TUI with Textual
+- Include a `voices/` folder for storing ONNX models (empty for now)
+- Include a `scripts/` folder for future installer scripts
+- Include a `data/` folder for sample input files
+
+Folder structure I want:
+
+voiceblend-tui/
+  README.md
+  pyproject.toml
+  requirements.txt
+  scripts/
+    install.sh
+  src/
+    voiceblend_tui/
+      __init__.py
+      app.py             # main Textual app entry
+      widgets/
+        __init__.py
+        header.py
+        footer.py
+        file_picker.py
+        blend_controls.py
+      core/
+        __init__.py
+        blender.py       # voice blending logic (placeholder)
+        config.py
+        file_utils.py
+  voices/
+  data/
+  main.py                # launches the TUI
+
+Generate all files with very small placeholder content.
+DO NOT implement real logic yet. Just stubs and structure.
+
+
+------------------------------------------------------------------------------------
+
+
+Now fill in the Textual TUI skeleton.
+
+Goals:
+- Create a working Textual App with a Header and Footer widget
+- Provide placeholder widgets for FilePicker and BlendControls
+- No actual logic yet, just UI structure that runs
+- Must use Textual 0.58+ async API
+
+Requirements:
+- app.py should define the VoiceBlendApp class
+- The layout should be:
+    Header
+    Main content area with two panels:
+        left: file picker
+        right: voice blending controls
+    Footer
+- main.py should be runnable with: python main.py
+
+Please generate complete implementations for:
+
+src/voiceblend_tui/app.py  
+src/voiceblend_tui/widgets/header.py  
+src/voiceblend_tui/widgets/footer.py  
+src/voiceblend_tui/widgets/file_picker.py  
+src/voiceblend_tui/widgets/blend_controls.py  
+main.py
+
+Do not add real ONNX logic yet. Just simple widgets with placeholder text.
+
+
+
+------------------------------------------------------------------------------------
+
+
+Now implement the backend placeholder logic for voice blending.
+
+Files to update:
+- src/voiceblend_tui/core/blender.py
+- src/voiceblend_tui/core/config.py
+- src/voiceblend_tui/core/file_utils.py
+
+Detailed spec:
+
+blender.py
+- create a class VoiceBlender
+- methods:
+    - list_models()      -> returns mock model list for now
+    - blend(text, model_a, model_b, ratio, out_file)
+      return a dummy success string for now
+
+config.py
+- create a dataclass AppConfig holding:
+    - voices_path
+    - default_ratio
+    - save_path
+
+file_utils.py
+- helper:
+    - read_text_file(path)
+    - ensure_output_path(path)
+    - check_overwrite(path) -> returns True/False
+
+All functions should be fully implemented but use mock behavior (no ONNX yet).
+
+Update NO UI files yet. Only backend.
+
+------------------------------------------------------------------------------------
+
+
+Now connect the backend logic to the UI.
+
+Requirements:
+- FilePicker allows selecting a text file
+- BlendControls allows:
+    - choosing model A
+    - choosing model B
+    - entering a blend ratio (0–100)
+    - choosing output filename
+- A "Generate" button calls VoiceBlender.blend()
+- Display results in a Textual Notification or MessageBox
+
+Update:
+src/voiceblend_tui/widgets/file_picker.py  
+src/voiceblend_tui/widgets/blend_controls.py  
+src/voiceblend_tui/app.py
+
+Implement working interactions using Textual message events and callbacks.
+This should now produce working—but mocked—blended audio.
+
+Do NOT integrate real ONNX yet.
+
+------------------------------------------------------------------------------------
+
+
+Now replace the dummy blender with real kokoro_onnx logic.
+
+Requirements:
+- Use the kokoro-onnx library
+- Support selecting two voices and blending
+- Generate .wav output file
+- Keep API the same:
+      blend(text, model_a, model_b, ratio, out_file)
+- Add proper error handling and logging
+- Ensure TUI stays responsive (use worker threads or asyncio threads)
+
+Update blender.py accordingly.
+
+DO NOT break the existing UI.
