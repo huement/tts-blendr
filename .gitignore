@@ -39,6 +39,7 @@ ENV/
 Thumbs.db
 
 # Project specific
+get-pip.py
 voices/*.onnx
 voices/*.onnxdata
 voices/*.bin
