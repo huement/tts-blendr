@@ -41,6 +41,7 @@ Thumbs.db
 # Project specific
 voices/*.onnx
 voices/*.onnxdata
+voices/*.bin
 data/*.wav
 data/*.mp3
 
