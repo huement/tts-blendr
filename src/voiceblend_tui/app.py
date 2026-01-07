@@ -3,7 +3,7 @@
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, Container
-from textual.widgets import Header, Footer, Button, Select, RadioSet, Input
+from textual.widgets import Header, Footer, Button, Select, RadioSet, Input, Static, TextArea
 
 from voiceblend_tui.widgets.file_input import FileInputWidget, FileLoaded
 from voiceblend_tui.widgets.voice_selection import VoiceSelectionWidget, VoiceSelectionChanged
@@ -66,28 +66,29 @@ class VoiceBlendApp(App):
     FileInputWidget, VoiceSelectionWidget, BlendRatioWidget, OutputFilenameWidget {
         height: auto;
         margin: 0 0 1 0;
-        padding: 0 1;
+        padding: 1;
         width: 100%;
-        border-bottom: solid $secondary;
+        border: none !important;
     }
     
     /* 8a. Compact section titles */
     .section-title {
-        margin: 0;
-        padding: 0 0 1 0;
+        margin: 0 0 1 0;
+        padding: 0;
         text-style: bold;
     }
     
     /* 8b. Compact labels */
     .label {
-        margin: 0;
-        padding: 0 0 1 0;
+        margin: 0 0 0 0;
+        padding: 0;
     }
     
     /* 8c. File content preview - compact */
     #file-content-preview {
-        height: 4;
-        margin: 0;
+        height: 8;
+        min-height: 8;
+        margin: 1 0 0 0;
         padding: 0;
     }
     
@@ -101,8 +102,8 @@ class VoiceBlendApp(App):
     Select {
         margin: 0;
         padding: 0 1;
-        height: auto;
-        min-height: 4;
+        height: 3;
+        min-height: 3;
     }
     
     Input {
@@ -110,12 +111,28 @@ class VoiceBlendApp(App):
         padding: 0 1;
         height: 3;
     }
-    
+
     /* 8f. Compact RadioSet */
     RadioSet {
         margin: 0;
         padding: 0;
+        height: 3;
+    }
+    
+    /* Status text styling */
+    .status-text {
+        margin: 1 0 0 0;
+        padding: 0;
         height: auto;
+        min-height: 1;
+    }
+    
+    /* Voice 2 section - ensure it's visible */
+    #voice-2-section {
+        margin: 1 0 0 0;
+        padding: 0;
+        height: auto;
+        display: block;
     }
     
     /* 8g. Compact Horizontal containers */
@@ -125,13 +142,29 @@ class VoiceBlendApp(App):
         height: auto;
     }
     
-    /* 8h. File display (read-only) */
-    #file-display {
+    /* Vertical containers in widgets - allow natural expansion */
+    VoiceSelectionWidget > Vertical,
+    FileInputWidget > Vertical,
+    BlendRatioWidget > Vertical,
+    OutputFilenameWidget > Vertical {
+        height: auto;
         margin: 0;
-        padding: 0 1;
-        height: 3;
+        padding: 0;
+    }
+    
+    /* 8h. File display (read-only) */
+    #file-display, .file-display {
+        margin: 0;
+        padding: 0;
+        height: auto;
+        min-height: 6;
+        max-height: 8;
         border: solid $primary;
         background: $panel;
+        text-style: none;
+        overflow: hidden;
+        content-align: left top;
+        width: 1fr;
     }
 
     /* 9. Compact buttons */
@@ -211,8 +244,15 @@ class VoiceBlendApp(App):
         self.message_log = self.query_one("#message-log", MessageLogWidget)
         self.message_log.log("Application initialized. Load a text file to begin.")
         
-        # Apply saved settings to widgets
-        self._apply_saved_settings()
+        # Log loaded settings
+        self.message_log.log("📋 Loading saved settings from .env...", "info")
+        self.message_log.log(f"   Voice mode: {self.voice_mode}", "info")
+        self.message_log.log(f"   Voice 1: {self.voice1 or 'None'}", "info")
+        self.message_log.log(f"   Voice 2: {self.voice2 or 'None'}", "info")
+        self.message_log.log(f"   Blend ratio: {self.blend_ratio}", "info")
+        
+        # Apply saved settings to widgets - wait for widgets to be ready
+        self.call_after_refresh(self._apply_saved_settings)
 
     def update_footer(self, message: str):
         """Update footer status message."""
@@ -229,9 +269,13 @@ class VoiceBlendApp(App):
             # Update output filename based on input file
             self._update_smart_output_filename()
         else:
+            # File was cleared or loading failed
             self.selected_text = ""
             self.selected_file_path = None
-            self.message_log.log("File loading failed", "error")
+            if not event.file_path:
+                self.message_log.log("File selection cleared", "info")
+            else:
+                self.message_log.log("File loading failed", "error")
 
     # Voice selection handlers
     def on_voice_selection_changed(self, event: VoiceSelectionChanged) -> None:
@@ -330,48 +374,281 @@ class VoiceBlendApp(App):
     
     def _apply_saved_settings(self) -> None:
         """Apply saved settings to widgets after mount."""
+        self.message_log.log("🔧 Applying saved settings to widgets...", "info")
+        
+        # Store original voice2 value to prevent it from being overwritten
+        original_voice2 = self.voice2
+        
         # Apply voice selection settings
-        voice_widget = self.query_one("#voice-selection", VoiceSelectionWidget)
-        if self.voice_mode == 2:
-            radio_set = voice_widget.query_one("#voice-mode", RadioSet)
-            radio_set.pressed = "2 Voices"
-            voice_widget.mode = 2
-            voice_widget.update_voice2_visibility()
-        
-        if self.voice1:
-            voice1_select = voice_widget.query_one("#voice-1-select", Select)
-            try:
-                voice1_select.value = self.voice1
-            except:
-                pass
-        
-        if self.voice2 and self.voice_mode == 2:
-            # Wait for voice 2 section to be created
-            self.call_after_refresh(lambda: self._set_voice2_value())
-        
-        # Apply blend ratio
-        if self.blend_ratio != 0.5:
-            blend_widget = self.query_one("#blend-ratio", BlendRatioWidget)
-            blend_widget.current_ratio = self.blend_ratio
-            ratio_select = blend_widget.query_one("#blend-ratio-select", Select)
-            try:
-                ratio_select.value = self.blend_ratio
-                blend_widget.update_status()
-            except:
-                pass
-    
-    def _set_voice2_value(self) -> None:
-        """Set voice 2 value after widget is created."""
-        if not self.voice2:
-            return
         try:
             voice_widget = self.query_one("#voice-selection", VoiceSelectionWidget)
-            voice2_select = voice_widget.query_one("#voice-2-select", Select)
-            voice2_select.value = self.voice2
-            voice_widget.selected_voice2 = self.voice2
-            voice_widget.update_status()
-        except:
-            pass
+            self.message_log.log("   ✅ Voice selection widget found", "info")
+        except Exception as e:
+            self.message_log.log(f"   ❌ Error finding voice widget: {e}", "error")
+            return
+        
+        # Wait for voices to be loaded first
+        if not voice_widget.available_voices:
+            self.message_log.log("   ⏳ Waiting for voices to load...", "info")
+            self.call_after_refresh(self._apply_saved_settings)
+            return
+        
+        self.message_log.log(f"   ✅ Voices loaded ({len(voice_widget.available_voices)} available)", "info")
+        
+        # Set voice mode
+        if self.voice_mode == 2:
+            self.message_log.log("   Setting voice mode to 2 voices...", "info")
+            try:
+                radio_set = voice_widget.query_one("#voice-mode", RadioSet)
+                radio_set.pressed = "2 Voices"
+                voice_widget.mode = 2
+                self.message_log.log("   ✅ Voice mode set to 2", "success")
+                
+                # Show blend ratio widget since mode is 2
+                try:
+                    blend_ratio_widget = self.query_one("#blend-ratio", BlendRatioWidget)
+                    blend_ratio_widget.show()
+                    # Force a refresh to ensure widget is visible
+                    self.call_after_refresh(lambda: None)
+                    self.message_log.log("   ✅ Blend ratio widget shown", "info")
+                except Exception as e:
+                    self.message_log.log(f"   ⚠️  Could not show blend ratio widget: {e}", "warning")
+                
+                # Update voice2 visibility - this creates the widget
+                self.message_log.log("   Creating voice 2 selector...", "info")
+                voice_widget.update_voice2_visibility()
+                self.message_log.log("   ✅ Voice 2 visibility updated", "success")
+            except Exception as e:
+                self.message_log.log(f"   ❌ Error setting voice mode: {e}", "error")
+        
+        # Set voice1 - but don't trigger notification yet to avoid overwriting voice2
+        if self.voice1:
+            self.message_log.log(f"   Setting voice 1 to: {self.voice1}", "info")
+            try:
+                voice1_select = voice_widget.query_one("#voice-1-select", Select)
+                voice1_select.value = self.voice1
+                voice_widget.selected_voice1 = self.voice1
+                voice_widget.update_status()
+                self.message_log.log(f"   ✅ Voice 1 set to: {self.voice1}", "success")
+                # Don't trigger notification here - wait until voice2 is also set
+            except Exception as e:
+                self.message_log.log(f"   ❌ Error setting voice 1: {e}", "error")
+        
+        # Set voice2 - wait for widget to be fully ready
+        if original_voice2 and self.voice_mode == 2:
+            self.message_log.log(f"   Scheduling voice 2 setting to: {original_voice2}", "info")
+            # Restore voice2 value in case it was overwritten
+            self.voice2 = original_voice2
+            # Give it multiple refresh cycles to ensure widget is ready
+            self.call_after_refresh(lambda: self._set_voice2_value(original_voice2, attempt=1))
+        elif original_voice2:
+            self.message_log.log(f"   ⚠️  Voice 2 value loaded ({original_voice2}) but mode is not 2", "warning")
+        
+        # Apply blend ratio - wait for widget to be ready if mode is 2
+        if self.voice_mode == 2:
+            # Always try to set blend ratio if mode is 2 (even if it's 0.5, to ensure it's set)
+            self.message_log.log(f"   Scheduling blend ratio setting to: {self.blend_ratio}", "info")
+            # Wait for blend ratio widget to be visible and ready - give it extra time
+            self.call_after_refresh(lambda: self.call_after_refresh(lambda: self._set_blend_ratio_value(self.blend_ratio, attempt=1)))
+        elif self.blend_ratio != 0.5:
+            self.message_log.log(f"   ⚠️  Blend ratio loaded ({self.blend_ratio}) but mode is not 2", "warning")
+    
+    def _set_blend_ratio_value(self, ratio_value: float, attempt: int = 1, max_attempts: int = 10) -> None:
+        """Set blend ratio value after widget is ready."""
+        if attempt > max_attempts:
+            self.message_log.log(f"   ❌ Failed to set blend ratio after {max_attempts} attempts", "error")
+            return
+        
+        self.message_log.log(f"   Attempt {attempt}/{max_attempts}: Trying to set blend ratio to: {ratio_value}", "info")
+        
+        try:
+            blend_widget = self.query_one("#blend-ratio", BlendRatioWidget)
+            
+            # Check if widget is visible
+            if not blend_widget.visible or not blend_widget.display:
+                self.message_log.log(f"   ⚠️  Blend ratio widget not visible, retrying...", "warning")
+                self.call_after_refresh(lambda: self._set_blend_ratio_value(ratio_value, attempt=attempt + 1))
+                return
+            
+            # Check if widget is attached
+            if not blend_widget.is_attached:
+                self.message_log.log(f"   ⚠️  Blend ratio widget not attached, retrying...", "warning")
+                self.call_after_refresh(lambda: self._set_blend_ratio_value(ratio_value, attempt=attempt + 1))
+                return
+            
+            try:
+                ratio_select = blend_widget.query_one("#blend-ratio-select", Select)
+                
+                if not ratio_select.is_attached:
+                    self.message_log.log(f"   ⚠️  Blend ratio select not attached, retrying...", "warning")
+                    self.call_after_refresh(lambda: self._set_blend_ratio_value(ratio_value, attempt=attempt + 1))
+                    return
+                
+                self.message_log.log(f"   ✅ Blend ratio select widget found and ready", "info")
+                
+                # Find the closest matching option (Select widget only accepts predefined values)
+                # Round to nearest 0.1 to match available options
+                rounded_ratio = round(ratio_value, 1)
+                # Clamp to valid range [0.1, 0.9]
+                rounded_ratio = max(0.1, min(0.9, rounded_ratio))
+                
+                # Check if this value exists in the options
+                available_values = [value for _, value in BlendRatioWidget.RATIO_OPTIONS]
+                if rounded_ratio not in available_values:
+                    # Find closest available value
+                    rounded_ratio = min(available_values, key=lambda x: abs(x - ratio_value))
+                    self.message_log.log(f"   ⚠️  Ratio {ratio_value} rounded to nearest option: {rounded_ratio}", "warning")
+                
+                self.message_log.log(f"   Setting ratio_select.value to: {rounded_ratio}", "info")
+                
+                # Set the value - Select widget accepts the value directly (the second element of the tuple)
+                # Try multiple methods to ensure it works
+                success = False
+                try:
+                    # Method 1: Set the value directly (float)
+                    ratio_select.value = rounded_ratio
+                    # Verify it was set
+                    if ratio_select.value == rounded_ratio:
+                        success = True
+                        self.message_log.log(f"   ✅ ratio_select.value set successfully to {rounded_ratio}", "info")
+                    else:
+                        self.message_log.log(f"   ⚠️  Value set but doesn't match: got {ratio_select.value}, expected {rounded_ratio}", "warning")
+                except Exception as e:
+                    self.message_log.log(f"   ⚠️  Method 1 failed: {e}, trying alternative...", "warning")
+                
+                if not success:
+                    # Method 2: Find the option tuple and set it
+                    try:
+                        for label, value in BlendRatioWidget.RATIO_OPTIONS:
+                            if value == rounded_ratio:
+                                # Try setting with the tuple
+                                ratio_select.value = (label, rounded_ratio)
+                                if ratio_select.value == rounded_ratio:
+                                    success = True
+                                    self.message_log.log(f"   ✅ Set ratio via tuple: ({label}, {rounded_ratio})", "info")
+                                    break
+                    except Exception as e2:
+                        self.message_log.log(f"   ⚠️  Method 2 failed: {e2}, trying index...", "warning")
+                
+                if not success:
+                    # Method 3: Set by finding the index
+                    try:
+                        for idx, (label, value) in enumerate(BlendRatioWidget.RATIO_OPTIONS):
+                            if value == rounded_ratio:
+                                # Get options from the select widget
+                                options = list(ratio_select.options) if hasattr(ratio_select, 'options') else []
+                                if options and idx < len(options):
+                                    ratio_select.value = options[idx][1]  # Set by value from options
+                                    if ratio_select.value == rounded_ratio:
+                                        success = True
+                                        self.message_log.log(f"   ✅ Set ratio via option index {idx}", "info")
+                                        break
+                    except Exception as e3:
+                        self.message_log.log(f"   ⚠️  Method 3 failed: {e3}", "error")
+                
+                if not success:
+                    # Last resort: just update the widget state manually and trigger change
+                    self.message_log.log(f"   ⚠️  All methods failed, setting state manually to {rounded_ratio}", "warning")
+                    blend_widget.current_ratio = rounded_ratio
+                    self.blend_ratio = rounded_ratio
+                    blend_widget.update_status()
+                    # Try to trigger the change event manually
+                    try:
+                        blend_widget.notify_ratio_changed()
+                    except:
+                        pass
+                    return
+                
+                blend_widget.current_ratio = rounded_ratio
+                # Update app state
+                self.blend_ratio = rounded_ratio
+                blend_widget.update_status()
+                self.message_log.log(f"   ✅ Blend ratio successfully set to: {rounded_ratio}", "success")
+                
+                # Trigger notification to update app state
+                blend_widget.notify_ratio_changed()
+                self.message_log.log("   ✅ Blend ratio change notification sent", "success")
+                
+            except Exception as e:
+                self.message_log.log(f"   ❌ Error accessing/setting blend ratio select: {e}, retrying...", "error")
+                self.call_after_refresh(lambda: self._set_blend_ratio_value(ratio_value, attempt=attempt + 1))
+                
+        except Exception as e:
+            self.message_log.log(f"   ❌ Unexpected error in _set_blend_ratio_value: {e}, retrying...", "error")
+            self.call_after_refresh(lambda: self._set_blend_ratio_value(ratio_value, attempt=attempt + 1))
+    
+    def _set_voice2_value(self, voice2_value: str, attempt: int = 1, max_attempts: int = 10) -> None:
+        """Set voice 2 value after widget is created."""
+        if not voice2_value:
+            self.message_log.log("   ⚠️  No voice2 value to set", "warning")
+            return
+        
+        if attempt > max_attempts:
+            self.message_log.log(f"   ❌ Failed to set voice 2 after {max_attempts} attempts", "error")
+            return
+        
+        self.message_log.log(f"   Attempt {attempt}/{max_attempts}: Trying to set voice 2 to: {voice2_value}", "info")
+        
+        # Ensure voice2 is set in app state
+        self.voice2 = voice2_value
+        
+        try:
+            voice_widget = self.query_one("#voice-selection", VoiceSelectionWidget)
+            
+            # Check if voice2 section exists
+            try:
+                voice2_section = voice_widget.query_one("#voice-2-section")
+                self.message_log.log(f"   ✅ Voice 2 section found", "info")
+            except Exception as e:
+                self.message_log.log(f"   ⚠️  Voice 2 section not found: {e}, retrying...", "warning")
+                self.call_after_refresh(lambda: self._set_voice2_value(voice2_value, attempt=attempt + 1))
+                return
+            
+            # Check if voice2_select exists and is ready
+            try:
+                voice2_select = voice_widget.query_one("#voice-2-select", Select)
+                # Check if widget is mounted and ready
+                if not voice2_select.is_attached:
+                    self.message_log.log(f"   ⚠️  Voice 2 select not attached, retrying...", "warning")
+                    self.call_after_refresh(lambda: self._set_voice2_value(voice2_value, attempt=attempt + 1))
+                    return
+                
+                self.message_log.log(f"   ✅ Voice 2 select widget found and attached", "info")
+                
+                # Ensure options are loaded by checking if we can access the widget
+                # If options aren't loaded yet, ensure they get set
+                if not voice_widget.available_voices:
+                    self.message_log.log(f"   ⚠️  Voices not loaded yet, retrying...", "warning")
+                    self.call_after_refresh(lambda: self._set_voice2_value(voice2_value, attempt=attempt + 1))
+                    return
+                
+                # Make sure options are set on the select widget
+                try:
+                    # Try to set options if they might not be set
+                    options = [(voice, voice) for voice in voice_widget.available_voices]
+                    voice2_select.set_options(options)
+                except:
+                    pass  # Options might already be set
+                
+                self.message_log.log(f"   ✅ Voice 2 select widget ready, setting value to: {voice2_value}", "info")
+                
+                # Try to set the value - this might fail if the widget isn't fully initialized
+                voice2_select.value = voice2_value
+                voice_widget.selected_voice2 = voice2_value
+                voice_widget.update_status()
+                self.message_log.log(f"   ✅ Voice 2 successfully set to: {voice2_value}", "success")
+                
+                # Manually trigger notification to update app state (this will update both voice1 and voice2)
+                voice_widget.notify_selection_changed()
+                self.message_log.log("   ✅ Voice selection change notification sent", "success")
+                
+            except Exception as e:
+                self.message_log.log(f"   ❌ Error accessing/setting voice 2 select: {e}, retrying...", "error")
+                self.call_after_refresh(lambda: self._set_voice2_value(voice2_value, attempt=attempt + 1))
+                
+        except Exception as e:
+            self.message_log.log(f"   ❌ Unexpected error in _set_voice2_value: {e}, retrying...", "error")
+            self.call_after_refresh(lambda: self._set_voice2_value(voice2_value, attempt=attempt + 1))
 
     # Generate button handler
     async def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -409,20 +686,15 @@ class VoiceBlendApp(App):
                 "warning"
             )
         
-        # Disable UI
+        # Disable only the generate button - let users change settings during generation
+        # This avoids complex re-enabling logic
         self.is_generating = True
         self.update_footer("Generating audio... Please wait.")
-        generate_btn = self.query_one("#generate-btn", Button)
-        generate_btn.disabled = True
-        
-        # Disable inputs
-        file_input = self.query_one("#file-input", FileInputWidget)
-        voice_selection = self.query_one("#voice-selection", VoiceSelectionWidget)
-        output_widget = self.query_one("#output-filename", OutputFilenameWidget)
-        
-        file_input.disabled = True
-        voice_selection.disabled = True
-        output_widget.disabled = True
+        try:
+            generate_btn = self.query_one("#generate-btn", Button)
+            generate_btn.disabled = True
+        except:
+            pass
         
         # Build detailed notification message
         output_filename = output_path.name
@@ -506,19 +778,35 @@ class VoiceBlendApp(App):
 
     def on_worker_state_changed(self, event) -> None:
         """Handle worker state changes."""
-        if event.worker.name == "audio_generator":
-            if event.worker.state == "success":
-                result = event.worker.result
+        # Log worker state changes for debugging
+        try:
+            worker_name = getattr(event.worker, 'name', 'unknown')
+            worker_state = getattr(event.worker, 'state', 'unknown')
+            self.message_log.log(f"Worker state changed: {worker_name} -> {worker_state}", "info")
+        except Exception as e:
+            try:
+                self.message_log.log(f"Error logging worker state: {e}", "error")
+            except:
+                pass
+        
+        worker_name = getattr(event.worker, 'name', None)
+        if worker_name == "audio_generator":
+            worker_state = getattr(event.worker, 'state', None)
+            if worker_state == "success":
+                self.message_log.log("Generation worker completed successfully, re-enabling UI...", "info")
+                result = getattr(event.worker, 'result', None)
                 output_path = Path(result) if result else None
                 
-                # Build completion message
+                # Update footer immediately
                 if output_path and output_path.exists():
+                    self.update_footer(f"✅ Complete! Saved: {output_path.name}")
                     completion_msg = (
                         f"✅ Generation Complete!\n"
                         f"File: {output_path.name}\n"
                         f"Location: {output_path.parent}"
                     )
                 else:
+                    self.update_footer("✅ Generation Complete!")
                     completion_msg = "✅ Audio generation complete!"
                 
                 self.message_log.log("Audio generation completed successfully!", "success")
@@ -532,13 +820,17 @@ class VoiceBlendApp(App):
                     timeout=8.0,
                 )
                 
-                # Reset UI state (but keep voices/ratio)
-                self._reset_ui_after_generation()
+                # Reset UI state (but keep voices/ratio) - use call_after_refresh to ensure it happens
+                self.call_after_refresh(lambda: self._reset_ui_after_generation())
+                # Also force enable as backup
+                self.call_after_refresh(lambda: self._force_enable_ui())
+                self.message_log.log("UI re-enable scheduled", "info")
                 
-            elif event.worker.state == "error":
-                error = event.worker.error
+            elif worker_state == "error":
+                error = getattr(event.worker, 'error', None)
                 error_msg = str(error) if error else "Unknown error"
                 self.message_log.log(f"Generation failed: {error_msg}", "error")
+                self.message_log.log("Re-enabling UI after error...", "info")
                 self.update_footer("Ready - Generation failed")
                 self.notify(
                     f"❌ Generation Failed\n{error_msg}",
@@ -546,18 +838,77 @@ class VoiceBlendApp(App):
                     timeout=8.0,
                 )
                 
-                # Re-enable UI on error
+                # Re-enable UI on error - use call_after_refresh
                 self.is_generating = False
-                generate_btn = self.query_one("#generate-btn", Button)
-                generate_btn.disabled = False
+                self.call_after_refresh(lambda: self._force_enable_ui())
+                self.message_log.log("UI re-enable scheduled after error", "info")
+                try:
+                    generate_btn = self.query_one("#generate-btn", Button)
+                    generate_btn.disabled = False
+                except:
+                    pass
                 
-                file_input = self.query_one("#file-input", FileInputWidget)
-                voice_selection = self.query_one("#voice-selection", VoiceSelectionWidget)
-                output_widget = self.query_one("#output-filename", OutputFilenameWidget)
+                try:
+                    file_input = self.query_one("#file-input", FileInputWidget)
+                    # Re-enable buttons
+                    try:
+                        browse_btn = file_input.query_one("#browse-btn", Button)
+                        browse_btn.disabled = False
+                    except:
+                        pass
+                    try:
+                        reload_btn = file_input.query_one("#reload-btn", Button)
+                        reload_btn.disabled = False
+                    except:
+                        pass
+                    try:
+                        clear_btn = file_input.query_one("#clear-btn", Button)
+                        clear_btn.disabled = False
+                    except:
+                        pass
+                except:
+                    pass
                 
-                file_input.disabled = False
-                voice_selection.disabled = False
-                output_widget.disabled = False
+                try:
+                    voice_selection = self.query_one("#voice-selection", VoiceSelectionWidget)
+                    # Re-enable child widgets
+                    try:
+                        voice1_select = voice_selection.query_one("#voice-1-select", Select)
+                        voice1_select.disabled = False
+                    except:
+                        pass
+                    try:
+                        voice2_select = voice_selection.query_one("#voice-2-select", Select)
+                        voice2_select.disabled = False
+                    except:
+                        pass
+                    try:
+                        radio_set = voice_selection.query_one("#voice-mode", RadioSet)
+                        radio_set.disabled = False
+                    except:
+                        pass
+                except:
+                    pass
+                
+                try:
+                    output_widget = self.query_one("#output-filename", OutputFilenameWidget)
+                    try:
+                        output_input = output_widget.query_one("#output-filename-input", Input)
+                        output_input.disabled = False
+                    except:
+                        pass
+                except:
+                    pass
+                
+                try:
+                    blend_ratio_widget = self.query_one("#blend-ratio", BlendRatioWidget)
+                    try:
+                        ratio_select = blend_ratio_widget.query_one("#blend-ratio-select", Select)
+                        ratio_select.disabled = False
+                    except:
+                        pass
+                except:
+                    pass
             else:
                 return
     
@@ -569,41 +920,41 @@ class VoiceBlendApp(App):
         # Reset footer
         self.update_footer("Ready")
         
-        # Re-enable generate button
-        generate_btn = self.query_one("#generate-btn", Button)
-        generate_btn.disabled = False
-        
-        # Re-enable widgets
-        file_input = self.query_one("#file-input", FileInputWidget)
-        voice_selection = self.query_one("#voice-selection", VoiceSelectionWidget)
-        output_widget = self.query_one("#output-filename", OutputFilenameWidget)
-        
-        file_input.disabled = False
-        voice_selection.disabled = False
-        output_widget.disabled = False
+        # Re-enable generate button (only thing we disabled)
+        try:
+            generate_btn = self.query_one("#generate-btn", Button)
+            generate_btn.disabled = False
+        except:
+            pass
         
         # Clear file input (reset script)
         self.selected_text = ""
         self.selected_file_path = None
-        file_input.selected_file = None
-        file_input.file_content = ""
         
-        # Reset file input widget display
-        display_widget = file_input.query_one("#file-display", Static)
-        display_widget.update("No file selected")
-        
-        # Clear file preview
-        preview_widget = file_input.query_one("#file-content-preview", TextArea)
-        preview_widget.text = ""
-        
-        # Clear status
-        status_widget = file_input.query_one("#file-status", Static)
-        status_widget.update("")
-        status_widget.set_classes("status-text")
+        try:
+            file_input = self.query_one("#file-input", FileInputWidget)
+            file_input.selected_file = None
+            file_input.file_content = ""
+            
+            # Reset file input widget display
+            display_widget = file_input.query_one("#file-display", Static)
+            display_widget.update("No file selected")
+            
+            # Clear file preview
+            preview_widget = file_input.query_one("#file-content-preview", TextArea)
+            preview_widget.text = ""
+            
+            # Clear status
+            status_widget = file_input.query_one("#file-status", Static)
+            status_widget.update("")
+            status_widget.set_classes("status-text")
+        except:
+            pass
         
         # Reset output filename to default (but keep it enabled)
         # The smart filename will update when a new file is loaded
         try:
+            output_widget = self.query_one("#output-filename", OutputFilenameWidget)
             output_input = output_widget.query_one("#output-filename-input", Input)
             output_input.value = "output"
             output_widget.current_filename = "output"
@@ -611,8 +962,23 @@ class VoiceBlendApp(App):
             output_widget.update_status()
         except:
             # If widget not ready, just set the internal state
-            output_widget.current_filename = "output"
-            output_widget.validate_filename()
+            try:
+                output_widget = self.query_one("#output-filename", OutputFilenameWidget)
+                output_widget.current_filename = "output"
+                output_widget.validate_filename()
+            except:
+                pass
         
         # Log reset
         self.message_log.log("UI reset - ready for next generation", "info")
+    
+    def _force_enable_ui(self) -> None:
+        """Force enable generate button - used as fallback if normal reset fails."""
+        self.is_generating = False
+        
+        # Re-enable generate button (only thing we disable)
+        try:
+            generate_btn = self.query_one("#generate-btn", Button)
+            generate_btn.disabled = False
+        except:
+            pass

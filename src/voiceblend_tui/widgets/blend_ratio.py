@@ -51,10 +51,8 @@ class BlendRatioWidget(Widget):
         """Called when widget is mounted."""
         self.add_class("blend-ratio-section")
         self.display = False  # Hidden by default
-        # Set default value
-        ratio_select = self.query_one("#blend-ratio-select", Select)
-        ratio_select.value = 0.5
-        self.current_ratio = 0.5
+        # Don't set default value here - let the app set it from saved settings
+        # The default will be set by the Select widget itself if needed
     
     def show(self):
         """Show the blend ratio widget."""

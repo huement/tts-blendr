@@ -33,13 +33,13 @@ class VoiceSelectionWidget(Widget):
         """Create child widgets."""
         with Vertical():
             yield Static("🎤 Voice Selection", classes="section-title")
-            yield Static("Mode:", classes="label")
-            yield RadioSet(
-                "1 Voice",
-                "2 Voices",
-                id="voice-mode"
-            )
-            yield Static("")  # Spacing
+            with Horizontal():
+                yield Static("Mode:", classes="label")
+                yield RadioSet(
+                    "1 Voice",
+                    "2 Voices",
+                    id="voice-mode"
+                )
             yield Static("Voice 1:", classes="label")
             yield Select([], id="voice-1-select", prompt="Select Voice 1")
             yield Static("", id="voice-status", classes="status-text")
@@ -82,7 +82,12 @@ class VoiceSelectionWidget(Widget):
             voice1_select = self.query_one("#voice-1-select", Select)
             voice1_select.set_options(options)
             
-            # Voice 2 select will be created dynamically when mode is 2
+            # Update voice2 select if it already exists
+            try:
+                voice2_select = self.query_one("#voice-2-select", Select)
+                voice2_select.set_options(options)
+            except:
+                pass  # Voice2 select doesn't exist yet, will be created later
             
         except Exception as e:
             self.app.notify(f"Error loading voices: {e}", severity="warning")
@@ -99,6 +104,12 @@ class VoiceSelectionWidget(Widget):
             try:
                 voice1_select = self.query_one("#voice-1-select", Select)
                 voice1_select.set_options(options)
+                # Update voice2 select if it exists
+                try:
+                    voice2_select = self.query_one("#voice-2-select", Select)
+                    voice2_select.set_options(options)
+                except:
+                    pass
             except:
                 pass
     
@@ -145,23 +156,35 @@ class VoiceSelectionWidget(Widget):
                         "am_michael", "am_onyx", "bm_george",
                     ]
                 
-                # Create voice 2 section
-                from textual.containers import Vertical as VContainer
-                voice2_section = VContainer(id="voice-2-section")
-                
-                # Mount the container first
-                voice1_select = self.query_one("#voice-1-select", Select)
-                self.mount(voice2_section, after=voice1_select)
-                
-                # Then add children after container is mounted
-                def add_voice2_children():
+                try:
+                    # Create voice 2 section with proper composition
+                    from textual.containers import Vertical as VContainer
+                    voice2_section = VContainer(id="voice-2-section")
+                    
+                    # Mount the container first
+                    voice1_select = self.query_one("#voice-1-select", Select)
+                    self.mount(voice2_section, after=voice1_select)
+                    
+                    # Add children directly (not using yield in a function)
                     voice2_label = Static("Voice 2:", classes="label")
                     options = [(voice, voice) for voice in self.available_voices]
                     voice2_select = Select(options, id="voice-2-select", prompt="Select Voice 2")
+                    
                     voice2_section.mount(voice2_label)
                     voice2_section.mount(voice2_select)
-                
-                self.call_after_refresh(add_voice2_children)
+                    
+                    # Log that we created it (if app has message_log available)
+                    try:
+                        message_log = self.app.query_one("#message-log")
+                        message_log.log("   ✅ Voice 2 selector widget created and mounted", "success")
+                    except:
+                        pass  # Message log not available yet
+                except Exception as e:
+                    try:
+                        message_log = self.app.query_one("#message-log")
+                        message_log.log(f"   ❌ Error creating voice 2 selector: {e}", "error")
+                    except:
+                        pass
             else:
                 voice2_section.display = True
         else:

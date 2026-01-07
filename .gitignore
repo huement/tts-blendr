@@ -33,7 +33,8 @@ ENV/
 *.swp
 *.swo
 *~
-
+*.txt
+!./*.txt
 # OS
 .DS_Store
 Thumbs.db
