@@ -268,6 +268,11 @@ class VoiceBlendApp(App):
             self.message_log.log(f"Text length: {len(event.content)} characters", "info")
             # Update output filename based on input file
             self._update_smart_output_filename()
+            
+            # Always ensure generate button is enabled when a file is loaded
+            # This handles the case where a new file is loaded after a previous generation
+            # Use call_after_refresh to ensure UI is ready
+            self.call_after_refresh(self._ensure_generate_button_enabled)
         else:
             # File was cleared or loading failed
             self.selected_text = ""
@@ -654,10 +659,33 @@ class VoiceBlendApp(App):
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button press events."""
         if event.button.id == "generate-btn":
+            # Check if button is disabled
+            if event.button.disabled:
+                self.message_log.log("Generate button is disabled - cannot generate", "warning")
+                return
             await self.handle_generate()
 
     async def handle_generate(self) -> None:
         """Handle generate button press."""
+        # Prevent re-entry if already generating
+        if self.is_generating:
+            self.message_log.log("Generation already in progress, please wait...", "warning")
+            return
+        
+        # Double-check button state
+        try:
+            generate_btn = self.query_one("#generate-btn", Button)
+            if generate_btn.disabled:
+                self.message_log.log("Generate button is disabled - this should not happen", "error")
+                # Force enable it if we have a file loaded
+                if self.selected_text:
+                    generate_btn.disabled = False
+                    self.is_generating = False
+                    self.message_log.log("Button force-enabled - please try again", "info")
+                return
+        except:
+            pass
+        
         # Validate inputs
         if not self.selected_text:
             self.app.notify("Please load a text file first", severity="warning")
@@ -797,21 +825,24 @@ class VoiceBlendApp(App):
                 result = getattr(event.worker, 'result', None)
                 output_path = Path(result) if result else None
                 
-                # Update footer immediately
+                # Update footer immediately with completion message
                 if output_path and output_path.exists():
-                    self.update_footer(f"✅ Complete! Saved: {output_path.name}")
+                    completion_footer = f"✅ Complete! Saved: {output_path.name} - Ready for next file"
                     completion_msg = (
                         f"✅ Generation Complete!\n"
                         f"File: {output_path.name}\n"
                         f"Location: {output_path.parent}"
                     )
                 else:
-                    self.update_footer("✅ Generation Complete!")
+                    completion_footer = "✅ Generation Complete! - Ready for next file"
                     completion_msg = "✅ Audio generation complete!"
+                
+                self.update_footer(completion_footer)
                 
                 self.message_log.log("Audio generation completed successfully!", "success")
                 if result:
                     self.message_log.log(f"Output: {result}", "info")
+                self.message_log.log("✅ Ready to generate another file - Load a new file and click Generate", "success")
                 
                 # Show flash notification
                 self.notify(
@@ -821,6 +852,7 @@ class VoiceBlendApp(App):
                 )
                 
                 # Reset UI state (but keep voices/ratio) - use call_after_refresh to ensure it happens
+                # Delay the reset slightly to let the user see the completion message
                 self.call_after_refresh(lambda: self._reset_ui_after_generation())
                 # Also force enable as backup
                 self.call_after_refresh(lambda: self._force_enable_ui())
@@ -831,7 +863,7 @@ class VoiceBlendApp(App):
                 error_msg = str(error) if error else "Unknown error"
                 self.message_log.log(f"Generation failed: {error_msg}", "error")
                 self.message_log.log("Re-enabling UI after error...", "info")
-                self.update_footer("Ready - Generation failed")
+                self.update_footer("❌ Generation failed - Ready to try again")
                 self.notify(
                     f"❌ Generation Failed\n{error_msg}",
                     severity="error",
@@ -913,64 +945,53 @@ class VoiceBlendApp(App):
                 return
     
     def _reset_ui_after_generation(self) -> None:
-        """Reset UI state after successful generation (keep voices/ratio)."""
+        """Reset UI state after successful generation (keep file, voices/ratio)."""
         # Reset generation state
         self.is_generating = False
         
-        # Reset footer
-        self.update_footer("Ready")
+        # Update footer - if file is still loaded, indicate ready to generate again
+        if self.selected_text:
+            self.update_footer("✅ Ready - Click Generate to create another audio file")
+        else:
+            self.update_footer("Ready - Load a file to generate audio")
         
         # Re-enable generate button (only thing we disabled)
         try:
             generate_btn = self.query_one("#generate-btn", Button)
             generate_btn.disabled = False
+            self.message_log.log("✅ Generate button re-enabled", "success")
         except:
             pass
         
-        # Clear file input (reset script)
-        self.selected_text = ""
-        self.selected_file_path = None
+        # DON'T clear file input - let user generate the same file again or load a new one
+        # This allows for better workflow when generating multiple files
         
-        try:
-            file_input = self.query_one("#file-input", FileInputWidget)
-            file_input.selected_file = None
-            file_input.file_content = ""
-            
-            # Reset file input widget display
-            display_widget = file_input.query_one("#file-display", Static)
-            display_widget.update("No file selected")
-            
-            # Clear file preview
-            preview_widget = file_input.query_one("#file-content-preview", TextArea)
-            preview_widget.text = ""
-            
-            # Clear status
-            status_widget = file_input.query_one("#file-status", Static)
-            status_widget.update("")
-            status_widget.set_classes("status-text")
-        except:
-            pass
-        
-        # Reset output filename to default (but keep it enabled)
-        # The smart filename will update when a new file is loaded
-        try:
-            output_widget = self.query_one("#output-filename", OutputFilenameWidget)
-            output_input = output_widget.query_one("#output-filename-input", Input)
-            output_input.value = "output"
-            output_widget.current_filename = "output"
-            output_widget.validate_filename()
-            output_widget.update_status()
-        except:
-            # If widget not ready, just set the internal state
-            try:
-                output_widget = self.query_one("#output-filename", OutputFilenameWidget)
-                output_widget.current_filename = "output"
-                output_widget.validate_filename()
-            except:
-                pass
+        # Update output filename if file is still loaded (smart filename)
+        if self.selected_file_path:
+            self._update_smart_output_filename()
         
         # Log reset
         self.message_log.log("UI reset - ready for next generation", "info")
+    
+    def _ensure_generate_button_enabled(self) -> None:
+        """Ensure generate button is enabled when a file is loaded."""
+        # Always try to enable the button when a file is loaded
+        # If generation is truly in progress, the button will be disabled again
+        # But if the flag is stuck, this will fix it
+        try:
+            generate_btn = self.query_one("#generate-btn", Button)
+            if generate_btn.disabled:
+                # If we have a file loaded, we should be able to generate
+                # Reset the flag if it seems stuck (user loaded a new file, so generation should be done)
+                if self.selected_text and self.is_generating:
+                    self.message_log.log("Resetting is_generating flag - new file loaded", "info")
+                    self.is_generating = False
+                
+                # Enable the button
+                generate_btn.disabled = False
+                self.message_log.log("✅ Generate button enabled - ready to generate", "success")
+        except Exception as e:
+            self.message_log.log(f"Could not enable generate button: {e}", "warning")
     
     def _force_enable_ui(self) -> None:
         """Force enable generate button - used as fallback if normal reset fails."""
