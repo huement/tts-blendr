@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="TTS Blender — Terminal Text-to-Speech Voice Blender. Blend multiple ONNX voices locally with a beautiful Textual TUI. Free, private, and cyberpunk as hell.">
+  <title>TTS Blender | VoiceBlend TUI</title>
+
+  <!-- Tailwind CSS v4 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+  <!-- Boxicons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css">
+
+  <!-- Google Fonts: Saira -->
+  <link href="https://fonts.googleapis.com/css2?family=Saira:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Saira:wght@400;700&display=swap');
+
+    :root {
+      --neon-cyan: #00f5ff;
+      --neon-pink: #ff00aa;
+      --neon-green: #39ff14;
+    }
+
+    * {
+      font-family: 'Saira', system-ui, sans-serif;
+    }
+
+    .terminal-font {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    .hero-bg {
+      background: radial-gradient(circle at center, #0a0a1f 0%, #020208 70%);
+    }
+
+    .scanlines {
+      background: linear-gradient(to bottom,
+          transparent 50%,
+          rgba(0, 245, 255, 0.03) 50%);
+      background-size: 100% 4px;
+      animation: scan 4s linear infinite;
+    }
+
+    @keyframes scan {
+      0% {
+        background-position: 0 0;
+      }
+
+      100% {
+        background-position: 0 100%;
+      }
+    }
+
+    .neon-text-cyan {
+      text-shadow:
+        0 0 10px var(--neon-cyan),
+        0 0 20px var(--neon-cyan),
+        0 0 40px var(--neon-cyan);
+    }
+
+    .neon-text-pink {
+      text-shadow:
+        0 0 10px var(--neon-pink),
+        0 0 20px var(--neon-pink),
+        0 0 40px var(--neon-pink);
+    }
+
+    .terminal {
+      background: #0a0a0a;
+      border: 3px solid #39ff14;
+      box-shadow:
+        0 0 20px #39ff14,
+        inset 0 0 30px rgba(57, 255, 20, 0.2);
+    }
+
+    .glitch {
+      animation: glitch 1s linear infinite alternate;
+    }
+
+    @keyframes glitch {
+      0% {
+        text-shadow: 2px 2px #ff00aa, -2px -2px #00f5ff;
+      }
+
+      100% {
+        text-shadow: -2px -2px #ff00aa, 2px 2px #00f5ff;
+      }
+    }
+  </style>
+</head>
+<body class="bg-[#020208] text-white hero-bg scanlines">
+  <!-- NAVBAR -->
+  <nav class="border-b border-[#39ff14]/30 bg-black/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-screen-2xl mx-auto px-8 py-5 flex items-center justify-between">
+      <div class="flex items-center gap-x-3">
+        <div
+          class="w-9 h-9 bg-[#39ff14] text-black flex items-center justify-center rounded border-2 border-[#39ff14] rotate-12">
+          <i class='bx bx-terminal text-2xl'></i>
+        </div>
+        <h1 class="text-3xl font-bold tracking-tighter neon-text-cyan">TTS BLENDER</h1>
+        <span class="text-xs font-mono text-[#ff00aa] tracking-[2px] mt-1">v1.0</span>
+      </div>
+
+      <div class="flex items-center gap-x-8 text-lg">
+        <a href="#features" class="hover:text-[#39ff14] transition-colors flex items-center gap-x-1">
+          <i class='bx bx-cube'></i>
+          <span>Features</span>
+        </a>
+        <a href="#terminal" class="hover:text-[#39ff14] transition-colors flex items-center gap-x-1">
+          <i class='bx bx-terminal'></i>
+          <span>Terminal</span>
+        </a>
+        <a href="#screenshots" class="hover:text-[#39ff14] transition-colors flex items-center gap-x-1">
+          <i class='bx bx-image'></i>
+          <span>Screenshots</span>
+        </a>
+        <a href="#onnx" class="hover:text-[#39ff14] transition-colors flex items-center gap-x-1">
+          <i class='bx bx-chip'></i>
+          <span>ONNX</span>
+        </a>
+        <a href="https://github.com/YOURUSERNAME/tts-blender" target="_blank"
+          class="flex items-center gap-x-2 px-6 py-2 border border-[#39ff14] hover:bg-[#39ff14] hover:text-black transition-all font-medium">
+          <i class='bx bxl-github'></i>
+          <span>GitHub</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="max-w-screen-2xl mx-auto px-8 pt-20 pb-16">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+      <div class="lg:col-span-7">
+        <div
+          class="inline-flex items-center gap-x-2 px-4 py-2 border border-[#ff00aa]/50 text-[#ff00aa] text-sm font-mono rounded-full mb-6">
+          <div class="w-2 h-2 bg-[#ff00aa] rounded-full animate-pulse"></div>
+          LOCAL • PRIVATE • FREE
+        </div>
+
+        <h1 class="text-7xl lg:text-8xl font-bold leading-none tracking-tighter neon-text-cyan glitch">
+          TTS BLENDER
+        </h1>
+        <p class="text-4xl lg:text-5xl font-bold text-white/90 mt-3 neon-text-pink">
+          VoiceBlend TUI
+        </p>
+
+        <p class="mt-6 max-w-lg text-xl text-white/80">
+          A cyberpunk terminal for blending multiple <span class="text-[#39ff14]">kokoro-onnx</span> voices into one
+          unique audio file.
+          Text → Speech. Locally. Beautifully.
+        </p>
+
+        <div class="flex items-center gap-x-4 mt-10">
+          <a href="#terminal"
+            class="px-8 py-4 bg-[#39ff14] hover:bg-white text-black font-bold text-lg flex items-center gap-x-3 transition-all">
+            <i class='bx bx-terminal'></i>
+            LAUNCH IN TERMINAL
+          </a>
+          <a href="https://github.com/YOURUSERNAME/tts-blender" target="_blank"
+            class="px-8 py-4 border-2 border-white/80 hover:border-[#39ff14] font-medium flex items-center gap-x-3">
+            <i class='bx bxl-github text-2xl'></i>
+            STAR ON GITHUB
+          </a>
+        </div>
+
+        <div class="flex items-center gap-x-8 mt-12 text-sm font-mono">
+          <div class="flex items-center gap-x-2">
+            <i class='bx bxs-check-circle text-[#39ff14]'></i>
+            <span>Python + Textual</span>
+          </div>
+          <div class="flex items-center gap-x-2">
+            <i class='bx bxs-check-circle text-[#39ff14]'></i>
+            <span>ONNX • kokoro</span>
+          </div>
+          <div class="flex items-center gap-x-2">
+            <i class='bx bxs-check-circle text-[#39ff14]'></i>
+            <span>Voice Blending</span>
+          </div>
+          <div class="flex items-center gap-x-2">
+            <i class='bx bxs-check-circle text-[#39ff14]'></i>
+            <span>100% Local &amp; Offline</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Terminal Preview in Hero -->
+      <div class="lg:col-span-5">
+        <div class="terminal rounded-2xl p-6 text-[#39ff14] text-sm max-w-md mx-auto">
+          <div class="flex justify-between mb-4 text-white/70 text-xs font-mono">
+            <div>tts-blender • main.py</div>
+            <div class="flex gap-x-1">
+              <span class="text-[#ff00aa]">●</span>
+              <span class="text-[#39ff14]">●</span>
+              <span class="text-[#00f5ff]">●</span>
+            </div>
+          </div>
+          <div class="space-y-1 font-mono">
+            <p>&gt; Loading kokoro-onnx models...</p>
+            <p class="text-[#00f5ff]">Voice 1: <span class="text-white">emma</span></p>
+            <p class="text-[#00f5ff]">Voice 2: <span class="text-white">jace</span></p>
+            <p>Blend ratio: <span class="text-[#ff00aa]">65/35</span></p>
+            <p class="text-emerald-400">Generating unique voice...</p>
+            <p class="text-[#39ff14] animate-pulse">&gt; data/blended_narration.wav <span
+                class="text-white">[saved]</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- WHAT IS IT -->
+  <section class="max-w-screen-2xl mx-auto px-8 py-16 border-t border-b border-[#39ff14]/20">
+    <div class="text-center mb-12">
+      <h2 class="text-5xl font-bold tracking-tight">Terminal-Powered Voice Alchemy</h2>
+      <p class="mt-4 text-xl text-white/70 max-w-2xl mx-auto">
+        Load any text file. Choose 1 or 2 voices. Dial in the perfect blend ratio.
+        Get a completely unique AI voice in seconds — all running locally in a gorgeous Textual TUI.
+      </p>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" class="max-w-screen-2xl mx-auto px-8 py-20">
+    <h2 class="text-4xl font-bold mb-12 flex items-center gap-x-4">
+      <i class='bx bx-cube text-[#39ff14]'></i>
+      FEATURES
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div class="bg-black/60 border border-[#39ff14]/30 p-8 rounded-3xl hover:border-[#39ff14] transition-all group">
+        <i class='bx bx-file text-5xl text-[#ff00aa] group-hover:scale-110 transition-transform'></i>
+        <h3 class="text-2xl font-bold mt-6">Text File Input</h3>
+        <p class="mt-3 text-white/70">Load any .txt file. Full validation + status feedback directly in the TUI.</p>
+      </div>
+      <div class="bg-black/60 border border-[#39ff14]/30 p-8 rounded-3xl hover:border-[#39ff14] transition-all group">
+        <i class='bx bx-user-voice text-5xl text-[#00f5ff] group-hover:scale-110 transition-transform'></i>
+        <h3 class="text-2xl font-bold mt-6">1 or 2 Voice Mode</h3>
+        <p class="mt-3 text-white/70">Dynamic UI — select from multiple kokoro-onnx voices. Voice 2 panel appears only
+          when needed.</p>
+      </div>
+      <div class="bg-black/60 border border-[#39ff14]/30 p-8 rounded-3xl hover:border-[#39ff14] transition-all group">
+        <i class='bx bx-slider-alt text-5xl text-[#39ff14] group-hover:scale-110 transition-transform'></i>
+        <h3 class="text-2xl font-bold mt-6">Precision Blend Ratios</h3>
+        <p class="mt-3 text-white/70">50/50, 60/40, 70/30, 80/20, 90/10 — create entirely new hybrid voices.</p>
+      </div>
+      <div class="bg-black/60 border border-[#39ff14]/30 p-8 rounded-3xl hover:border-[#39ff14] transition-all group">
+        <i class='bx bx-message-dots text-5xl text-[#ff00aa] group-hover:scale-110 transition-transform'></i>
+        <h3 class="text-2xl font-bold mt-6">Live Message Log</h3>
+        <p class="mt-3 text-white/70">Timestamped, color-coded log with info, success, warnings, and errors.</p>
+      </div>
+      <div class="bg-black/60 border border-[#39ff14]/30 p-8 rounded-3xl hover:border-[#39ff14] transition-all group">
+        <i class='bx bx-download text-5xl text-[#00f5ff] group-hover:scale-110 transition-transform'></i>
+        <h3 class="text-2xl font-bold mt-6">Smart Output Control</h3>
+        <p class="mt-3 text-white/70">Custom filename, automatic overwrite warnings, saved to <span
+            class="font-mono">data/</span>.</p>
+      </div>
+      <div class="bg-black/60 border border-[#39ff14]/30 p-8 rounded-3xl hover:border-[#39ff14] transition-all group">
+        <i class='bx bx-shield text-5xl text-[#39ff14] group-hover:scale-110 transition-transform'></i>
+        <h3 class="text-2xl font-bold mt-6">Fully Local &amp; Private</h3>
+        <p class="mt-3 text-white/70">No cloud. No API keys. Everything runs on your machine using ONNX Runtime.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ONNX EXPLANATION -->
+  <section id="onnx" class="max-w-screen-2xl mx-auto px-8 py-20 bg-black/40 border-t border-b border-[#00f5ff]/30">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+      <div class="lg:col-span-5">
+        <h2 class="text-5xl font-bold tracking-tight neon-text-cyan">What is ONNX?</h2>
+        <div class="mt-8 prose prose-invert text-lg">
+          <p><strong>ONNX (Open Neural Network Exchange)</strong> is an open standard for representing machine learning
+            models.</p>
+          <p>It allows models trained in one framework (PyTorch, TensorFlow, etc.) to run efficiently in another — in
+            this case, through <strong>ONNX Runtime</strong>.</p>
+          <p>TTS Blender uses <strong>kokoro-onnx</strong>, a blazing-fast 82M parameter TTS model optimized for local
+            inference. This gives you near real-time, high-quality, multi-voice speech synthesis completely offline.</p>
+          <p class="text-[#39ff14] font-medium">Result: You get production-grade voice blending in a terminal interface.
+          </p>
+        </div>
+      </div>
+      <div class="lg:col-span-7 bg-[#0a0a0a] p-10 rounded-3xl terminal border-[#00f5ff]">
+        <div class="font-mono text-[#00f5ff] text-sm space-y-4">
+          <div>&gt; ONNX model loaded: kokoro-v1.0.onnx</div>
+          <div>&gt; Voices database: voices-v1.0.bin</div>
+          <div class="text-emerald-400">&gt; Inference engine ready — blending voices in real time</div>
+          <div class="text-pink-400">&gt; Zero network calls • Full privacy • Maximum speed</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TERMINAL DEMO -->
+  <section id="terminal" class="max-w-screen-2xl mx-auto px-8 py-20">
+    <h2 class="text-4xl font-bold mb-8 flex items-center gap-x-4">
+      <i class='bx bx-terminal text-[#39ff14]'></i>
+      QUICK START — TERMINAL FLOW
+    </h2>
+
+    <div class="terminal max-w-4xl mx-auto p-8 rounded-3xl text-[#39ff14] text-base leading-relaxed">
+      <pre class="terminal-font overflow-x-auto"><code>$ python3.12 -m venv venv
+          $ source venv/bin/activate # Windows: venv\Scripts\activate
+          $ pip install -r requirements.txt
+          $ pip install -e .
+          $ python main.py
+
+          <span class="text-white">[TTS Blender launched]</span>
+
+          → Input File: ./data/script.txt
+          → Voice Mode: 2 Voices
+          → Voice 1: emma
+          → Voice 2: jace
+          → Blend Ratio: 65/35
+          → Output: cyberpunk_narration.wav
+
+          <span class="text-[#00f5ff]">Generating blended audio...</span>
+          <span class="text-emerald-400">[SUCCESS] Saved to data/cyberpunk_narration.wav</span></code></pre>
+    </div>
+
+    <p class="text-center mt-6 text-white/60 font-mono text-sm">One command to rule them all: <span
+        class="text-[#39ff14]">./run.sh</span></p>
+  </section>
+
+  <!-- SCREENSHOTS -->
+  <section id="screenshots" class="max-w-screen-2xl mx-auto px-8 py-20 bg-black/60">
+    <h2 class="text-4xl font-bold mb-12">What the TUI Looks Like</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- Screenshot 1 -->
+      <div class="terminal p-6 rounded-3xl">
+        <div class="bg-black rounded-2xl p-4 text-xs font-mono text-[#39ff14] h-96 flex flex-col">
+          <div class="text-center mb-4 text-white/80">Voice Selection Panel</div>
+          <div class="flex-1 flex flex-col gap-4">
+            <div class="p-4 border border-[#00f5ff]/30 rounded-xl">1 Voice Mode • emma</div>
+            <div class="p-4 border border-[#ff00aa]/30 rounded-xl">2 Voices Mode • emma + jace</div>
+            <svg width="100%" height="140" viewBox="0 0 300 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="20" y="20" width="260" height="100" rx="8" ry="8" stroke="#39ff14" stroke-width="4" />
+              <text x="50" y="60" fill="#ff00aa" font-size="18">Blend 65/35</text>
+              <line x1="50" y1="80" x2="250" y2="80" stroke="#00f5ff" stroke-width="12" stroke-linecap="round" />
+              <circle cx="170" cy="80" r="18" fill="#39ff14" />
+            </svg>
+          </div>
+        </div>
+        <p class="text-center mt-4 text-sm text-white/60">Voice + Blend Controls</p>
+      </div>
+
+      <!-- Screenshot 2 -->
+      <div class="terminal p-6 rounded-3xl">
+        <div class="bg-black rounded-2xl p-4 text-xs font-mono text-[#39ff14] h-96 flex flex-col">
+          <div class="text-center mb-4 text-white/80">Message Log + Progress</div>
+          <div class="flex-1 space-y-2 text-[13px] overflow-hidden">
+            <div class="text-emerald-400">[22:41] File validated</div>
+            <div class="text-cyan-400">[22:41] Starting
